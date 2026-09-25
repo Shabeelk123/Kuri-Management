@@ -238,11 +238,13 @@ function MembersTab({ kuri, members, onChange }) {
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState(null)
 
   async function addMember(e) {
     e.preventDefault()
     if (!supabase) return
     setAdding(true)
+    setAddError(null)
     const { data: newMember, error } = await supabase
       .from('members')
       .insert({
@@ -253,14 +255,17 @@ function MembersTab({ kuri, members, onChange }) {
       })
       .select()
       .single()
-    if (!error && newMember) {
-      await supabase.from('notifications').insert({
-        kuri_id: kuri.id,
-        member_id: newMember.id,
-        type: 'invited',
-        message: `You've been invited to join "${kuri.name}" — ${formatCurrency(kuri.monthly_installment)}/month for ${kuri.num_months} months.`,
-      })
+    if (error) {
+      setAdding(false)
+      setAddError(error.message)
+      return
     }
+    await supabase.from('notifications').insert({
+      kuri_id: kuri.id,
+      member_id: newMember.id,
+      type: 'invited',
+      message: `You've been invited to join "${kuri.name}" — ${formatCurrency(kuri.monthly_installment)}/month for ${kuri.num_months} months.`,
+    })
     setName('')
     setPhone('')
     setEmail('')
@@ -340,6 +345,8 @@ function MembersTab({ kuri, members, onChange }) {
               required
             />
           )}
+
+          {addError && <p className="font-label-md text-label-md text-error">{addError}</p>}
 
           <Button type="submit" size="md" disabled={adding} icon={<Icon name="person_add" className="text-[18px]" />}>
             {adding ? 'Adding…' : 'Invite Member'}
