@@ -32,8 +32,12 @@ export default function Profile() {
 
   async function handleSignOut() {
     if (!supabase) return
-    await supabase.auth.signOut()
+    // Navigate away from the protected route first — signing out flips `user`
+    // to null via AuthContext's listener, and if RequireAuth is still mounted
+    // when that happens, it redirects to /organizer/login and wins the race
+    // against navigating to '/' afterward.
     navigate('/')
+    await supabase.auth.signOut()
   }
 
   return (

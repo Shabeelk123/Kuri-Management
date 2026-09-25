@@ -29,13 +29,6 @@ export default function TopBar({ title, subtitle, showBack = false, rightSlot })
             )}
           </div>
         </div>
-        <div className="flex items-center gap-space-sm shrink-0">
-          {rightSlot ?? (
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <Icon name="person" className="text-on-primary text-[18px]" />
-            </div>
-          )}
-        </div>
       </div>
     </header>
   )

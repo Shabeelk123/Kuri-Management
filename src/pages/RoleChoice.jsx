@@ -84,19 +84,6 @@ export default function RoleChoice() {
           </button>
         </section>
 
-        <div className="flex flex-col items-center text-center mb-6">
-          <button
-            onClick={() => navigate('/member/login')}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-primary-container hover:text-primary active:bg-surface-container-high transition-colors focus:outline-none"
-            type="button"
-          >
-            <span className="font-label-lg text-label-lg font-bold">
-              Already a member? Sign in with phone number
-            </span>
-            <Icon name="arrow_right_alt" className="text-base" />
-          </button>
-        </div>
-
         <footer className="mt-auto pt-4 flex flex-col items-center text-center">
           <div className="w-12 h-1 bg-surface-container-highest rounded-full mb-3" />
           <div className="flex items-center justify-center gap-1.5 text-on-surface-variant mb-1">
