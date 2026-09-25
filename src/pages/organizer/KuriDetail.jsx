@@ -479,7 +479,7 @@ function PaymentsTab({ kuri, members, payments, monthIndex: currentMonthIdx, onC
               <button
                 onClick={() => togglePaid(m)}
                 disabled={pending === m.id}
-                className={`h-10 px-4 rounded-lg font-label-md text-label-md font-bold active:scale-95 transition-transform ${
+                className={`h-10 px-4 rounded-lg font-label-md text-label-md font-bold active:scale-95 transition-transform shrink-0 ${
                   isPaid
                     ? 'bg-surface-container-high text-on-surface'
                     : 'bg-primary-container text-on-primary'
@@ -562,9 +562,21 @@ function PickRecipientTab({ kuri, members, monthIndex, onChange }) {
     setSelectionType('manual')
   }
 
+  if (members.length === 0) {
+    return (
+      <Card className="text-center py-8">
+        <Icon name="groups" className="text-3xl text-outline mb-2" />
+        <p className="font-body-md text-body-md text-on-surface-variant">
+          No accepted members yet — invite people from the Members tab first.
+        </p>
+      </Card>
+    )
+  }
+
   if (eligible.length === 0) {
     return (
-      <Card>
+      <Card className="text-center py-8">
+        <Icon name="celebration" className="text-3xl text-secondary mb-2" />
         <p className="font-body-md text-body-md text-on-surface-variant">
           Every member has already received their payout for this Kuri.
         </p>
