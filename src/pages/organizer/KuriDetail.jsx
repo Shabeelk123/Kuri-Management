@@ -36,7 +36,11 @@ export default function KuriDetail() {
 
   return (
     <>
-      <TopBar title={kuri.name} subtitle={`Round ${monthIndex + 1} of ${kuri.num_months}`} showBack />
+      <TopBar
+        title={kuri.name}
+        subtitle={kuri.status === 'completed' ? 'Completed' : `Round ${monthIndex + 1} of ${kuri.num_months}`}
+        showBack
+      />
       <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-20 pb-8 px-margin bg-surface min-h-screen">
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-margin px-margin">
           {TABS.map((t) => (
@@ -347,6 +351,11 @@ function PickRecipientTab({ kuri, members, monthIndex, onChange }) {
           message,
         }))
       )
+
+      const remainingEligible = members.filter((m) => !m.has_received && m.id !== selected.id).length
+      if (remainingEligible === 0) {
+        await supabase.from('kuris').update({ status: 'completed' }).eq('id', kuri.id)
+      }
     }
     setConfirming(false)
     if (!error) onChange()
