@@ -12,7 +12,8 @@ export default function Login({ role = 'member' }) {
   return (
     <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-safe pb-safe px-margin bg-surface min-h-screen">
       <div className="flex flex-col w-full pb-8">
-        <div className="flex flex-col pt-8 pb-4">
+        <BackToRoleChoice />
+        <div className="flex flex-col pt-2 pb-4">
           <h1 className="font-headline-xl-mobile text-headline-xl-mobile text-primary tracking-tight mb-2">
             {role === 'organizer' ? 'Organizer Sign In' : 'Sign In to Kuri Ledger'}
           </h1>
@@ -65,6 +66,20 @@ export default function Login({ role = 'member' }) {
         </div>
       </div>
     </main>
+  )
+}
+
+function BackToRoleChoice() {
+  const navigate = useNavigate()
+  return (
+    <button
+      type="button"
+      onClick={() => navigate('/')}
+      aria-label="Back"
+      className="w-11 h-11 -ml-2 mt-2 rounded-full flex items-center justify-center text-primary active:bg-surface-container-high transition-colors self-start"
+    >
+      <Icon name="arrow_back_ios_new" className="text-2xl" />
+    </button>
   )
 }
 
