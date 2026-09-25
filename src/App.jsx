@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/AuthContext'
 import RequireAuth from './components/RequireAuth'
 import RoleChoice from './pages/RoleChoice'
+import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/organizer/Dashboard'
 import CreateKuri from './pages/organizer/CreateKuri'
 import OrganizerKuriDetail from './pages/organizer/KuriDetail'
@@ -19,6 +20,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<RoleChoice />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route path="/organizer/login" element={<Login role="organizer" />} />
           <Route path="/organizer/verify" element={<VerifyOtp role="organizer" />} />
