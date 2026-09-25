@@ -4,6 +4,7 @@ const VARIANTS = {
   secondary:
     'bg-surface-container-high text-on-surface border border-surface-dim active:scale-[0.985]',
   ghost: 'bg-transparent text-outline active:text-primary-container',
+  danger: 'bg-error text-on-error shadow-sm active:scale-[0.985]',
 }
 
 const SIZES = {

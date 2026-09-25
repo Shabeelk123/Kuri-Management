@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import TopBar from '../../components/TopBar'
 import Card from '../../components/Card'
@@ -60,7 +60,7 @@ export default function KuriDetail() {
         </div>
 
         {tab === 'Overview' && (
-          <OverviewTab kuri={kuri} members={accepted} payments={payments} monthIndex={monthIndex} />
+          <OverviewTab kuri={kuri} members={accepted} payments={payments} monthIndex={monthIndex} onChange={refresh} />
         )}
         {tab === 'Members' && <MembersTab kuri={kuri} members={members} onChange={refresh} />}
         {tab === 'Payments' && (
@@ -77,13 +77,41 @@ export default function KuriDetail() {
   )
 }
 
-function OverviewTab({ kuri, members, payments, monthIndex }) {
+const DUE_DAYS = [1, 5, 10, 15, 20, 25]
+
+function OverviewTab({ kuri, members, payments, monthIndex, onChange }) {
+  const navigate = useNavigate()
   const paidThisMonth = payments.filter((p) => p.month === monthIndex)
   const collected = paidThisMonth.reduce((sum, p) => sum + Number(p.amount), 0)
   const expected = members.length * Number(kuri.monthly_installment)
   const unpaidCount = members.length - paidThisMonth.length
   const dueDate = dueDateForMonth(kuri, monthIndex)
   const isPastDue = new Date() > new Date(`${dueDate}T23:59:59`)
+
+  const [name, setName] = useState(kuri.name)
+  const [dueDay, setDueDay] = useState(kuri.due_day)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function saveDetails(e) {
+    e.preventDefault()
+    if (!supabase) return
+    setSaving(true)
+    setSaved(false)
+    await supabase.from('kuris').update({ name, due_day: dueDay }).eq('id', kuri.id)
+    setSaving(false)
+    setSaved(true)
+    onChange()
+  }
+
+  async function deleteKuri() {
+    if (!supabase) return
+    setDeleting(true)
+    await supabase.from('kuris').delete().eq('id', kuri.id)
+    navigate('/organizer')
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -128,6 +156,78 @@ function OverviewTab({ kuri, members, payments, monthIndex }) {
           </div>
         </Card>
       </div>
+
+      <Card>
+        <h3 className="font-headline-md text-headline-md text-primary mb-3">Kuri Settings</h3>
+        <form onSubmit={saveDetails} className="flex flex-col gap-3">
+          <div>
+            <label className="font-label-md text-label-md text-on-surface-variant" htmlFor="edit-kuri-name">
+              Group Name
+            </label>
+            <input
+              id="edit-kuri-name"
+              className="w-full h-12 mt-1 px-3.5 bg-surface-container-low text-on-surface rounded-lg font-body-lg text-body-lg focus:outline-none"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="font-label-md text-label-md text-on-surface-variant" htmlFor="edit-due-day">
+              Monthly Payment Due Day
+            </label>
+            <select
+              id="edit-due-day"
+              className="w-full h-12 mt-1 px-3.5 bg-surface-container-low text-on-surface rounded-lg font-body-lg text-body-lg focus:outline-none"
+              value={dueDay}
+              onChange={(e) => setDueDay(Number(e.target.value))}
+            >
+              {DUE_DAYS.map((day) => (
+                <option key={day} value={day}>
+                  {day}
+                  {day === 1 ? 'st' : 'th'} of every month
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button type="submit" size="md" variant="secondary" disabled={saving}>
+            {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save changes'}
+          </Button>
+        </form>
+
+        <div className="mt-5 pt-4 border-t border-surface-container">
+          {!confirmingDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="w-full h-12 rounded-lg text-error font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 active:bg-error-container/30 transition-colors"
+            >
+              <Icon name="delete" className="text-[18px]" />
+              Delete this Kuri
+            </button>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="font-label-md text-label-md text-on-surface-variant text-center">
+                This permanently deletes the Kuri, its members, payments, and history. This can't be
+                undone.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="md" onClick={() => setConfirmingDelete(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  size="md"
+                  disabled={deleting}
+                  onClick={deleteKuri}
+                >
+                  {deleting ? 'Deleting…' : 'Yes, delete'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   )
 }
@@ -165,6 +265,26 @@ function MembersTab({ kuri, members, onChange }) {
     setPhone('')
     setEmail('')
     setAdding(false)
+    onChange()
+  }
+
+  const [removingId, setRemovingId] = useState(null)
+  const [confirmingRemoveId, setConfirmingRemoveId] = useState(null)
+
+  async function removeMember(member) {
+    if (!supabase) return
+    setRemovingId(member.id)
+    const { error } = await supabase.from('members').delete().eq('id', member.id)
+    setRemovingId(null)
+    setConfirmingRemoveId(null)
+    if (error) {
+      window.alert(
+        member.has_received
+          ? "Can't remove this member — they've already received a payout, which is part of the Kuri's permanent history."
+          : error.message
+      )
+      return
+    }
     onChange()
   }
 
@@ -243,7 +363,38 @@ function MembersTab({ kuri, members, onChange }) {
                   {m.phone ?? m.email}
                 </p>
               </div>
-              <StatusChip status={m.status} />
+              <div className="flex items-center gap-2 shrink-0">
+                <StatusChip status={m.status} />
+                {!m.has_received &&
+                  (confirmingRemoveId === m.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => removeMember(m)}
+                        disabled={removingId === m.id}
+                        className="h-8 px-2.5 rounded-lg bg-error text-on-error font-label-md text-label-md font-bold"
+                      >
+                        {removingId === m.id ? '…' : 'Confirm'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingRemoveId(null)}
+                        className="h-8 px-2.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-md text-label-md"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={`Remove ${m.name}`}
+                      onClick={() => setConfirmingRemoveId(m.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-error active:bg-error-container/30 transition-colors"
+                    >
+                      <Icon name="person_remove" className="text-[18px]" />
+                    </button>
+                  ))}
+              </div>
             </div>
             {i < members.length - 1 && <div className="h-px bg-surface-container mx-2" />}
           </div>
