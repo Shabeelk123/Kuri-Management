@@ -253,9 +253,12 @@ function MembersTab({ kuri, members, onChange }) {
   )
 }
 
-function PaymentsTab({ kuri, members, payments, monthIndex, onChange }) {
+function PaymentsTab({ kuri, members, payments, monthIndex: currentMonthIdx, onChange }) {
   const [pending, setPending] = useState(null)
-  const paidMemberIds = new Set(payments.filter((p) => p.month === monthIndex).map((p) => p.member_id))
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthIdx)
+  const paidMemberIds = new Set(
+    payments.filter((p) => p.month === selectedMonth).map((p) => p.member_id)
+  )
 
   async function togglePaid(member) {
     if (!supabase) return
@@ -266,19 +269,19 @@ function PaymentsTab({ kuri, members, payments, monthIndex, onChange }) {
         .delete()
         .eq('kuri_id', kuri.id)
         .eq('member_id', member.id)
-        .eq('month', monthIndex)
+        .eq('month', selectedMonth)
     } else {
       await supabase.from('payments').insert({
         kuri_id: kuri.id,
         member_id: member.id,
-        month: monthIndex,
+        month: selectedMonth,
         amount: kuri.monthly_installment,
       })
       await supabase.from('notifications').insert({
         kuri_id: kuri.id,
         member_id: member.id,
         type: 'payment_recorded',
-        message: `Your payment of ${formatCurrency(kuri.monthly_installment)} for ${monthLabel(kuri.start_date, monthIndex)} was recorded.`,
+        message: `Your payment of ${formatCurrency(kuri.monthly_installment)} for ${monthLabel(kuri.start_date, selectedMonth)} was recorded.`,
       })
     }
     setPending(null)
@@ -287,9 +290,29 @@ function PaymentsTab({ kuri, members, payments, monthIndex, onChange }) {
 
   return (
     <Card>
-      <h3 className="font-headline-md text-headline-md text-primary mb-2">
-        {monthLabel(kuri.start_date, monthIndex)} Payments
-      </h3>
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={() => setSelectedMonth((m) => Math.max(0, m - 1))}
+          disabled={selectedMonth === 0}
+          aria-label="Previous month"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-primary disabled:opacity-30 active:bg-surface-container-high transition-colors"
+        >
+          <Icon name="chevron_left" className="text-xl" />
+        </button>
+        <h3 className="font-headline-md text-headline-md text-primary">
+          {monthLabel(kuri.start_date, selectedMonth)} Payments
+        </h3>
+        <button
+          type="button"
+          onClick={() => setSelectedMonth((m) => Math.min(currentMonthIdx, m + 1))}
+          disabled={selectedMonth >= currentMonthIdx}
+          aria-label="Next month"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-primary disabled:opacity-30 active:bg-surface-container-high transition-colors"
+        >
+          <Icon name="chevron_right" className="text-xl" />
+        </button>
+      </div>
       {members.length === 0 && (
         <p className="font-body-md text-body-md text-on-surface-variant">No accepted members yet.</p>
       )}
