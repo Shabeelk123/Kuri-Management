@@ -74,7 +74,7 @@ export default function KuriDetail() {
   return (
     <>
       <TopBar title={kuri.name} subtitle={`Round ${monthIndex + 1} of ${kuri.num_months}`} showBack />
-      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-20 pb-8 px-margin bg-surface min-h-screen">
+      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-header-safe pb-8 px-margin bg-surface min-h-screen">
         <div className="flex flex-col w-full space-y-4">
           <Card>
             <div className="flex items-baseline justify-between mb-2">

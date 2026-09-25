@@ -28,7 +28,7 @@ export default function Invitations() {
   return (
     <>
       <TopBar title="Kuri Ledger" subtitle="Invitations" />
-      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-20 pb-28 px-margin bg-surface min-h-screen">
+      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-header-safe pb-28 px-margin bg-surface min-h-screen">
         <div className="flex flex-col w-full space-y-space-md pt-1">
           <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight">
             Invitations

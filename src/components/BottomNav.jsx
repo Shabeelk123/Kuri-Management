@@ -5,6 +5,7 @@ const ITEMS = [
   { to: '/member/kuris', label: 'My Kuris', icon: 'savings' },
   { to: '/member/invitations', label: 'Invitations', icon: 'mark_email_unread' },
   { to: '/member/updates', label: 'Updates', icon: 'notifications' },
+  { to: '/member/profile', label: 'Profile', icon: 'account_circle' },
 ]
 
 export default function BottomNav() {

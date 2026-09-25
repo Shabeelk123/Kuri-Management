@@ -1,34 +1,15 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import TopBar from '../../components/TopBar'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
-import OrganizerBottomNav from '../../components/OrganizerBottomNav'
+import BottomNav from '../../components/BottomNav'
 import { useAuth } from '../../lib/AuthContext'
 import { supabase } from '../../lib/supabase'
 
 export default function Profile() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!user?.id || !supabase) {
-      setLoading(false)
-      return
-    }
-    supabase
-      .from('organizers')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        setProfile(data ?? null)
-        setLoading(false)
-      })
-  }, [user?.id])
 
   async function handleSignOut() {
     if (!supabase) return
@@ -45,9 +26,7 @@ export default function Profile() {
             <div className="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center mb-3">
               <Icon name="person" className="text-3xl text-on-primary" />
             </div>
-            <h1 className="font-headline-lg text-headline-lg text-primary">
-              {loading ? 'Loading…' : profile?.name ?? 'Organizer'}
-            </h1>
+            <h1 className="font-headline-lg text-headline-lg text-primary">Member</h1>
           </div>
 
           <Card>
@@ -76,7 +55,7 @@ export default function Profile() {
           </Button>
         </div>
       </main>
-      <OrganizerBottomNav />
+      <BottomNav />
     </>
   )
 }

@@ -27,6 +27,10 @@
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
 }
+/* For content below the fixed TopBar (h-16 = 4rem content height + its own pt-safe). */
+.pt-header-safe {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 4rem);
+}
 
 ::-webkit-scrollbar {
   display: none;

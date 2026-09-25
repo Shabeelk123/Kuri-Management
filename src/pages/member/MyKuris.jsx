@@ -16,7 +16,7 @@ export default function MyKuris() {
   return (
     <>
       <TopBar title="Kuri Ledger" subtitle="Member Kuris" />
-      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-20 pb-28 px-margin bg-surface min-h-screen">
+      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-header-safe pb-28 px-margin bg-surface min-h-screen">
         <div className="flex flex-col w-full space-y-space-md">
           <div className="flex items-end justify-between pt-1">
             <div className="flex flex-col">

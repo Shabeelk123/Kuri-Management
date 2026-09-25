@@ -24,7 +24,7 @@ export default function KuriDetail() {
     return (
       <>
         <TopBar title="Kuri" showBack />
-        <main className="flex-1 flex flex-col w-full max-w-xl mx-auto pt-24 px-margin min-h-screen">
+        <main className="flex-1 flex flex-col w-full max-w-xl mx-auto pt-header-safe px-margin min-h-screen">
           <p className="font-body-md text-body-md text-on-surface-variant">Loading…</p>
         </main>
       </>
@@ -41,7 +41,7 @@ export default function KuriDetail() {
         subtitle={kuri.status === 'completed' ? 'Completed' : `Round ${monthIndex + 1} of ${kuri.num_months}`}
         showBack
       />
-      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-20 pb-8 px-margin bg-surface min-h-screen">
+      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-header-safe pb-8 px-margin bg-surface min-h-screen">
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-margin px-margin">
           {TABS.map((t) => (
             <button

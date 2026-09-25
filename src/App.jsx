@@ -13,6 +13,7 @@ import Invitations from './pages/member/Invitations'
 import MyKuris from './pages/member/MyKuris'
 import MemberKuriDetail from './pages/member/KuriDetail'
 import Updates from './pages/member/Updates'
+import MemberProfile from './pages/member/Profile'
 
 export default function App() {
   return (
@@ -88,6 +89,14 @@ export default function App() {
             element={
               <RequireAuth redirectTo="/member/login">
                 <Updates />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/member/profile"
+            element={
+              <RequireAuth redirectTo="/member/login">
+                <MemberProfile />
               </RequireAuth>
             }
           />

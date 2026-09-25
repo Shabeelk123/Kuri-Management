@@ -73,7 +73,7 @@ export default function CreateKuri() {
   return (
     <>
       <TopBar title="Start New Kuri" showBack />
-      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-20 pb-8 px-margin bg-surface min-h-screen">
+      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-header-safe pb-8 px-margin bg-surface min-h-screen">
         <div className="flex flex-col w-full pb-8">
           <div className="pt-2 pb-5 flex flex-col gap-1">
             <div className="inline-flex items-center gap-2 self-start px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant">
