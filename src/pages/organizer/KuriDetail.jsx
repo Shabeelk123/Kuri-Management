@@ -58,12 +58,12 @@ export default function KuriDetail() {
         {tab === 'Overview' && (
           <OverviewTab kuri={kuri} members={accepted} payments={payments} monthIndex={monthIndex} />
         )}
-        {tab === 'Members' && <MembersTab kuriId={kuriId} members={members} onChange={refresh} />}
+        {tab === 'Members' && <MembersTab kuri={kuri} members={members} onChange={refresh} />}
         {tab === 'Payments' && (
           <PaymentsTab kuri={kuri} members={accepted} payments={payments} monthIndex={monthIndex} onChange={refresh} />
         )}
         {tab === 'Pick recipient' && (
-          <PickRecipientTab kuriId={kuriId} members={accepted} monthIndex={monthIndex} onChange={refresh} />
+          <PickRecipientTab kuri={kuri} members={accepted} monthIndex={monthIndex} onChange={refresh} />
         )}
         {tab === 'Past recipients' && (
           <PastRecipientsTab kuri={kuri} recipients={recipients} members={members} />
@@ -128,7 +128,7 @@ function OverviewTab({ kuri, members, payments, monthIndex }) {
   )
 }
 
-function MembersTab({ kuriId, members, onChange }) {
+function MembersTab({ kuri, members, onChange }) {
   const [name, setName] = useState('')
   const [contactMethod, setContactMethod] = useState('phone') // 'phone' | 'email'
   const [phone, setPhone] = useState('')
@@ -139,12 +139,24 @@ function MembersTab({ kuriId, members, onChange }) {
     e.preventDefault()
     if (!supabase) return
     setAdding(true)
-    await supabase.from('members').insert({
-      kuri_id: kuriId,
-      name,
-      phone: contactMethod === 'phone' ? toStoredPhone(phone) : null,
-      email: contactMethod === 'email' ? email : null,
-    })
+    const { data: newMember, error } = await supabase
+      .from('members')
+      .insert({
+        kuri_id: kuri.id,
+        name,
+        phone: contactMethod === 'phone' ? toStoredPhone(phone) : null,
+        email: contactMethod === 'email' ? email : null,
+      })
+      .select()
+      .single()
+    if (!error && newMember) {
+      await supabase.from('notifications').insert({
+        kuri_id: kuri.id,
+        member_id: newMember.id,
+        type: 'invited',
+        message: `You've been invited to join "${kuri.name}" — ${formatCurrency(kuri.monthly_installment)}/month for ${kuri.num_months} months.`,
+      })
+    }
     setName('')
     setPhone('')
     setEmail('')
@@ -258,6 +270,12 @@ function PaymentsTab({ kuri, members, payments, monthIndex, onChange }) {
         month: monthIndex,
         amount: kuri.monthly_installment,
       })
+      await supabase.from('notifications').insert({
+        kuri_id: kuri.id,
+        member_id: member.id,
+        type: 'payment_recorded',
+        message: `Your payment of ${formatCurrency(kuri.monthly_installment)} for ${monthLabel(kuri.start_date, monthIndex)} was recorded.`,
+      })
     }
     setPending(null)
     onChange()
@@ -301,7 +319,7 @@ function PaymentsTab({ kuri, members, payments, monthIndex, onChange }) {
   )
 }
 
-function PickRecipientTab({ kuriId, members, monthIndex, onChange }) {
+function PickRecipientTab({ kuri, members, monthIndex, onChange }) {
   const eligible = useMemo(() => members.filter((m) => !m.has_received), [members])
   const [selected, setSelected] = useState(null)
   const [selectionType, setSelectionType] = useState('manual')
@@ -313,13 +331,22 @@ function PickRecipientTab({ kuriId, members, monthIndex, onChange }) {
     if (!supabase || !selected) return
     setConfirming(true)
     const { error } = await supabase.from('recipients').insert({
-      kuri_id: kuriId,
+      kuri_id: kuri.id,
       month: monthIndex,
       member_id: selected.id,
       selection_type: selectionType,
     })
     if (!error) {
       await supabase.from('members').update({ has_received: true }).eq('id', selected.id)
+      const message = `${selected.name} was picked to receive this month's ${formatCurrency(kuri.total_amount)} payout for "${kuri.name}".`
+      await supabase.from('notifications').insert(
+        members.map((m) => ({
+          kuri_id: kuri.id,
+          member_id: m.id,
+          type: 'recipient',
+          message,
+        }))
+      )
     }
     setConfirming(false)
     if (!error) onChange()
