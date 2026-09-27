@@ -98,7 +98,7 @@ export default function VerifyOtp({ role = 'member' }) {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-secondary" />
-              <h2 className="font-headline-md text-headline-md text-primary">Enter 4-Digit Code</h2>
+              <h2 className="font-headline-md text-headline-md text-primary">Enter 6-Digit Code</h2>
             </div>
             <span className="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps">
               SMS SENT
@@ -113,14 +113,14 @@ export default function VerifyOtp({ role = 'member' }) {
             className="w-full h-16 mb-4 text-center rounded-lg bg-surface-container-low shadow-inner font-numeric-hero-mobile text-numeric-hero-mobile text-primary font-extrabold tracking-[0.5em] focus:outline-none"
             inputMode="numeric"
             pattern="[0-9]*"
-            maxLength={4}
+            maxLength={6}
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="0000"
+            placeholder="000000"
             required
           />
           {error && <p className="font-label-md text-label-md text-error mb-3">{error}</p>}
-          <Button type="submit" disabled={verifying || code.length !== 4}>
+          <Button type="submit" disabled={verifying || code.length !== 6}>
             {verifying ? 'Verifying…' : 'Verify & Continue'}
           </Button>
 
