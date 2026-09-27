@@ -129,15 +129,18 @@ function OverviewTab({ kuri, members, payments, roundIndex, onChange }) {
     if (!supabase) return
     setOpening(true)
     const nextRound = roundIndex === null ? 0 : roundIndex + 1
-    await supabase.from('kuris').update({ current_round: nextRound }).eq('id', kuri.id)
-    await supabase.from('notifications').insert(
-      members.map((m) => ({
-        kuri_id: kuri.id,
-        member_id: m.id,
-        type: 'payment_due',
-        message: `A payment is now due for "${kuri.name}" — ${formatCurrency(kuri.monthly_installment)} for Round ${nextRound + 1}.`,
-      }))
-    )
+    const { error } = await supabase.from('kuris').update({ current_round: nextRound }).eq('id', kuri.id)
+    if (!error) {
+      // Fire-and-forget: the round is already open; nothing waits on notifications landing.
+      supabase.from('notifications').insert(
+        members.map((m) => ({
+          kuri_id: kuri.id,
+          member_id: m.id,
+          type: 'payment_due',
+          message: `A payment is now due for "${kuri.name}" — ${formatCurrency(kuri.monthly_installment)} for Round ${nextRound + 1}.`,
+        }))
+      )
+    }
     setOpening(false)
     onChange()
   }
@@ -320,7 +323,8 @@ function MembersTab({ kuri, members, onChange }) {
       setAddError(error.message)
       return
     }
-    await supabase.from('notifications').insert({
+    // Fire-and-forget: the invite is already saved; nothing waits on the notification.
+    supabase.from('notifications').insert({
       kuri_id: kuri.id,
       member_id: newMember.id,
       type: 'invited',
@@ -489,18 +493,22 @@ function PaymentsTab({ kuri, members, payments, roundIndex, onChange }) {
         .eq('member_id', member.id)
         .eq('month', selectedRound)
     } else {
-      await supabase.from('payments').insert({
+      const { error } = await supabase.from('payments').insert({
         kuri_id: kuri.id,
         member_id: member.id,
         month: selectedRound,
         amount: kuri.monthly_installment,
       })
-      await supabase.from('notifications').insert({
-        kuri_id: kuri.id,
-        member_id: member.id,
-        type: 'payment_recorded',
-        message: `Your payment of ${formatCurrency(kuri.monthly_installment)} for ${roundLabel(kuri, selectedRound)} was recorded.`,
-      })
+      // Fire-and-forget: nothing in the UI waits on the notification landing,
+      // so there's no reason to block "Mark paid" on this round-trip.
+      if (!error) {
+        supabase.from('notifications').insert({
+          kuri_id: kuri.id,
+          member_id: member.id,
+          type: 'payment_recorded',
+          message: `Your payment of ${formatCurrency(kuri.monthly_installment)} for ${roundLabel(kuri, selectedRound)} was recorded.`,
+        })
+      }
     }
     setPending(null)
     onChange()
@@ -593,9 +601,9 @@ function PickRecipientTab({ kuri, members, roundIndex, onChange }) {
       selection_type: selectionType,
     })
     if (!error) {
-      await supabase.from('members').update({ has_received: true }).eq('id', selected.id)
+      // Fire-and-forget: nothing waits on notifications landing.
       const message = `${selected.name} was picked to receive this month's ${formatCurrency(kuri.total_amount)} payout for "${kuri.name}".`
-      await supabase.from('notifications').insert(
+      supabase.from('notifications').insert(
         members.map((m) => ({
           kuri_id: kuri.id,
           member_id: m.id,
@@ -604,10 +612,15 @@ function PickRecipientTab({ kuri, members, roundIndex, onChange }) {
         }))
       )
 
+      // These two are independent of each other, so run them together instead
+      // of one after the other.
       const remainingEligible = members.filter((m) => !m.has_received && m.id !== selected.id).length
-      if (remainingEligible === 0) {
-        await supabase.from('kuris').update({ status: 'completed' }).eq('id', kuri.id)
-      }
+      await Promise.all([
+        supabase.from('members').update({ has_received: true }).eq('id', selected.id),
+        remainingEligible === 0
+          ? supabase.from('kuris').update({ status: 'completed' }).eq('id', kuri.id)
+          : Promise.resolve(),
+      ])
     }
     setConfirming(false)
     if (!error) onChange()

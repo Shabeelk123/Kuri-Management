@@ -23,20 +23,17 @@ export default function KuriDetail() {
       return
     }
     setLoading(true)
+    // Embedding payments(*) via the members->payments FK saves a round-trip
+    // versus fetching them as a separate query.
     supabase
       .from('members')
-      .select('*, kuris(*)')
+      .select('*, kuris(*), payments(*)')
       .eq('id', memberId)
       .single()
       .then(({ data }) => {
         setMember(data ?? null)
+        setPayments(data?.payments ?? [])
         if (data?.kuri_id) {
-          supabase
-            .from('payments')
-            .select('*')
-            .eq('kuri_id', data.kuri_id)
-            .eq('member_id', memberId)
-            .then(({ data: p }) => setPayments(p ?? []))
           supabase
             .from('recipients')
             .select('*, members(name)')
