@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import TopBar from '../../components/TopBar'
+import BottomNav from '../../components/BottomNav'
 import Card from '../../components/Card'
 import ProgressBar from '../../components/ProgressBar'
 import StatusChip from '../../components/StatusChip'
@@ -49,9 +50,13 @@ export default function KuriDetail() {
 
   if (loading) {
     return (
-      <main className="flex-1 flex flex-col w-full max-w-xl mx-auto pt-24 px-margin min-h-screen">
-        <p className="font-body-md text-body-md text-on-surface-variant">Loading…</p>
-      </main>
+      <>
+        <TopBar title="Kuri" showBack />
+        <main className="flex-1 flex flex-col w-full max-w-xl mx-auto pt-header-safe pb-28 px-margin min-h-screen">
+          <p className="font-body-md text-body-md text-on-surface-variant">Loading…</p>
+        </main>
+        <BottomNav />
+      </>
     )
   }
 
@@ -59,9 +64,13 @@ export default function KuriDetail() {
 
   if (!kuri) {
     return (
-      <main className="flex-1 flex flex-col w-full max-w-xl mx-auto pt-24 px-margin min-h-screen">
-        <p className="font-body-md text-body-md text-on-surface-variant">Kuri not found.</p>
-      </main>
+      <>
+        <TopBar title="Kuri" showBack />
+        <main className="flex-1 flex flex-col w-full max-w-xl mx-auto pt-header-safe pb-28 px-margin min-h-screen">
+          <p className="font-body-md text-body-md text-on-surface-variant">Kuri not found.</p>
+        </main>
+        <BottomNav />
+      </>
     )
   }
 
@@ -80,7 +89,7 @@ export default function KuriDetail() {
         subtitle={noRoundOpen ? 'No round open yet' : `Round ${roundIndex + 1} of ${kuri.num_months}`}
         showBack
       />
-      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-header-safe pb-8 px-margin bg-surface min-h-screen">
+      <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-header-safe pb-28 px-margin bg-surface min-h-screen">
         <div className="flex flex-col w-full space-y-4">
           {noRoundOpen ? (
             <Card className="text-center py-8">
@@ -198,6 +207,7 @@ export default function KuriDetail() {
           )}
         </div>
       </main>
+      <BottomNav />
     </>
   )
 }
