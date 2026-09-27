@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import Button from '../../components/Button'
 import { supabase } from '../../lib/supabase'
 import { toE164 } from '../../lib/phone'
+
+const RESEND_COOLDOWN_SECONDS = 30
 
 export default function VerifyOtp({ role = 'member' }) {
   const navigate = useNavigate()
@@ -13,6 +15,30 @@ export default function VerifyOtp({ role = 'member' }) {
   const [code, setCode] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState(null)
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS)
+  const [resending, setResending] = useState(false)
+  const [resent, setResent] = useState(false)
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setInterval(() => setCooldown((c) => c - 1), 1000)
+    return () => clearInterval(timer)
+  }, [cooldown])
+
+  async function handleResend() {
+    if (!supabase || cooldown > 0) return
+    setResending(true)
+    setError(null)
+    setResent(false)
+    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: toE164(phone) })
+    setResending(false)
+    if (otpError) {
+      setError(otpError.message)
+      return
+    }
+    setResent(true)
+    setCooldown(RESEND_COOLDOWN_SECONDS)
+  }
 
   async function handleVerify(e) {
     e.preventDefault()
@@ -95,6 +121,26 @@ export default function VerifyOtp({ role = 'member' }) {
           <Button type="submit" disabled={verifying || code.length !== 4}>
             {verifying ? 'Verifying…' : 'Verify & Continue'}
           </Button>
+
+          <div className="flex items-center justify-center gap-1.5 mt-4">
+            {resent && cooldown === RESEND_COOLDOWN_SECONDS && (
+              <span className="font-label-md text-label-md text-primary mr-1">Code resent —</span>
+            )}
+            {cooldown > 0 ? (
+              <span className="font-label-md text-label-md text-on-surface-variant">
+                Resend code in {cooldown}s
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending}
+                className="font-label-md text-label-md text-secondary font-bold"
+              >
+                {resending ? 'Resending…' : 'Resend code'}
+              </button>
+            )}
+          </div>
         </form>
 
         <div className="rounded-xl bg-surface-container p-4 flex items-start gap-3.5">
