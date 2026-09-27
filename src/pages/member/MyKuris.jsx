@@ -4,7 +4,7 @@ import TopBar from '../../components/TopBar'
 import BottomNav from '../../components/BottomNav'
 import { useMemberRecords } from '../../hooks/useMemberRecords'
 import { useAuth } from '../../lib/AuthContext'
-import { currentMonthIndex } from '../../lib/dates'
+import { currentRoundIndex } from '../../lib/dates'
 import { formatCurrency } from '../../lib/format'
 
 export default function MyKuris() {
@@ -59,8 +59,8 @@ export default function MyKuris() {
           {accepted.map((record) => {
             const kuri = record.kuris
             if (!kuri) return null
-            const monthIndex = currentMonthIndex(kuri)
-            const percentDone = Math.round(((monthIndex + 1) / kuri.num_months) * 100)
+            const roundIndex = currentRoundIndex(kuri)
+            const percentDone = roundIndex === null ? 0 : Math.round(((roundIndex + 1) / kuri.num_months) * 100)
 
             return (
               <div
@@ -73,7 +73,9 @@ export default function MyKuris() {
                       {kuri.name}
                     </h3>
                     <p className="font-label-md text-label-md text-on-surface-variant">
-                      Round {monthIndex + 1} of {kuri.num_months} • Active Circle
+                      {roundIndex === null
+                        ? 'No round open yet'
+                        : `Round ${roundIndex + 1} of ${kuri.num_months} • Active Circle`}
                     </p>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-caps text-label-caps shrink-0">
@@ -85,7 +87,9 @@ export default function MyKuris() {
                   <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
                     <div className="flex items-center gap-2 text-on-surface-variant">
                       <Icon name="payments" className="text-[18px]" />
-                      <span className="font-label-md text-label-md">Monthly Pot</span>
+                      <span className="font-label-md text-label-md">
+                        {kuri.schedule_type === 'occasion' ? 'Round Pot' : 'Monthly Pot'}
+                      </span>
                     </div>
                     <span className="font-label-lg text-label-lg text-on-surface font-bold">
                       {formatCurrency(kuri.total_amount)}
@@ -94,7 +98,9 @@ export default function MyKuris() {
                   <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
                     <div className="flex items-center gap-2 text-on-surface-variant">
                       <Icon name="account_balance_wallet" className="text-[18px]" />
-                      <span className="font-label-md text-label-md">Your Monthly Share</span>
+                      <span className="font-label-md text-label-md">
+                        {kuri.schedule_type === 'occasion' ? 'Your Share Per Round' : 'Your Monthly Share'}
+                      </span>
                     </div>
                     <span className="font-label-lg text-label-lg text-on-surface font-bold">
                       {formatCurrency(kuri.monthly_installment)}

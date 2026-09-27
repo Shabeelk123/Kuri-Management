@@ -5,7 +5,7 @@ import Button from '../../components/Button'
 import OrganizerBottomNav from '../../components/OrganizerBottomNav'
 import { useOrganizerKuris } from '../../hooks/useOrganizerKuris'
 import { useAuth } from '../../lib/AuthContext'
-import { currentMonthIndex } from '../../lib/dates'
+import { currentRoundIndex } from '../../lib/dates'
 import { formatCurrency } from '../../lib/format'
 
 export default function Dashboard() {
@@ -61,7 +61,10 @@ export default function Dashboard() {
                     {kuri.name}
                   </h3>
                   <p className="font-label-md text-label-md text-on-surface-variant">
-                    Round {currentMonthIndex(kuri) + 1} of {kuri.num_months}
+                    {(() => {
+                      const round = currentRoundIndex(kuri)
+                      return round === null ? 'No round open yet' : `Round ${round + 1} of ${kuri.num_months}`
+                    })()}
                   </p>
                 </div>
                 <span
@@ -77,7 +80,9 @@ export default function Dashboard() {
               <div className="mt-3 flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
                 <div className="flex items-center gap-2 text-on-surface-variant">
                   <Icon name="payments" className="text-[18px]" />
-                  <span className="font-label-md text-label-md">Monthly Pot</span>
+                  <span className="font-label-md text-label-md">
+                    {kuri.schedule_type === 'occasion' ? 'Round Pot' : 'Monthly Pot'}
+                  </span>
                 </div>
                 <span className="font-label-lg text-label-lg text-on-surface font-bold">
                   {formatCurrency(kuri.total_amount)}

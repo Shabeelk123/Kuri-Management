@@ -25,6 +25,7 @@ export default function CreateKuri() {
   const { user } = useAuth()
   const monthOptions = nextMonthOptions()
 
+  const [scheduleType, setScheduleType] = useState('monthly') // 'monthly' | 'occasion'
   const [name, setName] = useState('')
   const [totalAmount, setTotalAmount] = useState(50000)
   const [numMembers, setNumMembers] = useState(10)
@@ -56,8 +57,12 @@ export default function CreateKuri() {
         total_amount: totalAmount,
         monthly_installment: perPerson,
         num_months: numMembers,
-        start_date: startDate,
-        due_day: dueDay,
+        schedule_type: scheduleType,
+        // start_date/due_day are unused for occasion-based Kuris (rounds are
+        // opened manually), but the columns are NOT NULL — fill with today
+        // as an inert placeholder.
+        start_date: scheduleType === 'monthly' ? startDate : new Date().toISOString().slice(0, 10),
+        due_day: scheduleType === 'monthly' ? dueDay : 1,
       })
       .select()
       .single()
@@ -91,6 +96,41 @@ export default function CreateKuri() {
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-2.5">
+              <label className="font-label-lg text-label-lg text-primary">Payment Schedule</label>
+              <div className="flex items-center bg-surface-container-low p-1 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setScheduleType('monthly')}
+                  className={`flex-1 py-2.5 rounded-lg font-label-md text-label-md font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    scheduleType === 'monthly'
+                      ? 'bg-surface-container-lowest text-primary shadow-sm'
+                      : 'text-on-surface-variant'
+                  }`}
+                >
+                  <Icon name="calendar_month" className="text-[16px]" />
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleType('occasion')}
+                  className={`flex-1 py-2.5 rounded-lg font-label-md text-label-md font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    scheduleType === 'occasion'
+                      ? 'bg-surface-container-lowest text-primary shadow-sm'
+                      : 'text-on-surface-variant'
+                  }`}
+                >
+                  <Icon name="celebration" className="text-[16px]" />
+                  Occasion-based
+                </button>
+              </div>
+              <p className="font-label-md text-label-md text-on-surface-variant">
+                {scheduleType === 'monthly'
+                  ? 'A fixed monthly cycle — everyone pays on the same day each month.'
+                  : "For groups without a fixed schedule (e.g. wedding funds). You'll manually open each round when it's time to collect — nothing is due until then."}
+              </p>
+            </div>
+
             <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-2">
               <label className="font-label-lg text-label-lg text-primary flex items-center justify-between" htmlFor="groupName">
                 <span>Group Name</span>
@@ -111,9 +151,9 @@ export default function CreateKuri() {
 
             <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-2">
               <label className="font-label-lg text-label-lg text-primary flex items-center justify-between" htmlFor="poolAmount">
-                <span>Total Pool Amount per Month</span>
+                <span>Total Pool Amount per Round</span>
                 <span className="font-label-caps text-label-caps text-secondary font-bold uppercase tracking-wider">
-                  Monthly Pot
+                  {scheduleType === 'monthly' ? 'Monthly Pot' : 'Per-Round Pot'}
                 </span>
               </label>
               <div className="relative flex items-center">
@@ -142,7 +182,7 @@ export default function CreateKuri() {
 
             <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
-                <label className="font-label-lg text-label-lg text-primary">Number of Members / Months</label>
+                <label className="font-label-lg text-label-lg text-primary">Number of Members / Rounds</label>
                 <span className="font-label-md text-label-md text-on-surface-variant">{numMembers} rounds</span>
               </div>
               <div className="flex items-center justify-between bg-surface-container-low rounded-lg p-1.5">
@@ -159,7 +199,7 @@ export default function CreateKuri() {
                     {numMembers}
                   </span>
                   <span className="font-label-md text-label-md text-on-surface-variant">
-                    {numMembers} members ({numMembers} months)
+                    {numMembers} members ({numMembers} rounds)
                   </span>
                 </div>
                 <button
@@ -183,7 +223,8 @@ export default function CreateKuri() {
                     Live Calculation
                   </span>
                   <p className="font-numeric-sub text-numeric-sub text-primary font-bold leading-tight">
-                    Each person pays ₹{perPerson.toLocaleString('en-IN')} every month
+                    Each person pays ₹{perPerson.toLocaleString('en-IN')}{' '}
+                    {scheduleType === 'monthly' ? 'every month' : 'each round'}
                   </p>
                   <p className="font-label-md text-label-md text-on-surface-variant">
                     Calculated automatically: Total ₹{totalAmount.toLocaleString('en-IN')} ÷ {numMembers} members
@@ -192,52 +233,56 @@ export default function CreateKuri() {
               </div>
             </div>
 
-            <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-2">
-              <label className="font-label-lg text-label-lg text-primary flex items-center justify-between" htmlFor="startMonthPicker">
-                <span>Start Month &amp; Year</span>
-                <span className="font-label-md text-label-md text-outline">First collection</span>
-              </label>
-              <div className="relative flex items-center">
-                <Icon name="calendar_month" className="absolute left-3.5 text-outline text-[20px] pointer-events-none" />
-                <select
-                  className="w-full h-14 pl-11 pr-10 bg-surface-container-low text-on-surface font-body-lg text-body-lg rounded-lg appearance-none focus:outline-none focus:bg-surface-container-lowest transition-colors"
-                  id="startMonthPicker"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                >
-                  {monthOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <Icon name="arrow_drop_down" className="absolute right-3.5 text-outline pointer-events-none" />
-              </div>
-            </div>
+            {scheduleType === 'monthly' && (
+              <>
+                <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-2">
+                  <label className="font-label-lg text-label-lg text-primary flex items-center justify-between" htmlFor="startMonthPicker">
+                    <span>Start Month &amp; Year</span>
+                    <span className="font-label-md text-label-md text-outline">First collection</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <Icon name="calendar_month" className="absolute left-3.5 text-outline text-[20px] pointer-events-none" />
+                    <select
+                      className="w-full h-14 pl-11 pr-10 bg-surface-container-low text-on-surface font-body-lg text-body-lg rounded-lg appearance-none focus:outline-none focus:bg-surface-container-lowest transition-colors"
+                      id="startMonthPicker"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    >
+                      {monthOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <Icon name="arrow_drop_down" className="absolute right-3.5 text-outline pointer-events-none" />
+                  </div>
+                </div>
 
-            <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-2">
-              <label className="font-label-lg text-label-lg text-primary flex items-center justify-between" htmlFor="dueDayPicker">
-                <span>Monthly Payment Due Day</span>
-                <span className="font-label-md text-label-md text-outline">Monthly recurring</span>
-              </label>
-              <div className="relative flex items-center">
-                <Icon name="event_repeat" className="absolute left-3.5 text-outline text-[20px] pointer-events-none" />
-                <select
-                  className="w-full h-14 pl-11 pr-10 bg-surface-container-low text-on-surface font-body-lg text-body-lg rounded-lg appearance-none focus:outline-none focus:bg-surface-container-lowest transition-colors"
-                  id="dueDayPicker"
-                  value={dueDay}
-                  onChange={(e) => setDueDay(Number(e.target.value))}
-                >
-                  {DUE_DAYS.map((day) => (
-                    <option key={day} value={day}>
-                      {day}
-                      {day === 1 ? 'st' : 'th'} of every month
-                    </option>
-                  ))}
-                </select>
-                <Icon name="arrow_drop_down" className="absolute right-3.5 text-outline pointer-events-none" />
-              </div>
-            </div>
+                <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-2">
+                  <label className="font-label-lg text-label-lg text-primary flex items-center justify-between" htmlFor="dueDayPicker">
+                    <span>Monthly Payment Due Day</span>
+                    <span className="font-label-md text-label-md text-outline">Monthly recurring</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <Icon name="event_repeat" className="absolute left-3.5 text-outline text-[20px] pointer-events-none" />
+                    <select
+                      className="w-full h-14 pl-11 pr-10 bg-surface-container-low text-on-surface font-body-lg text-body-lg rounded-lg appearance-none focus:outline-none focus:bg-surface-container-lowest transition-colors"
+                      id="dueDayPicker"
+                      value={dueDay}
+                      onChange={(e) => setDueDay(Number(e.target.value))}
+                    >
+                      {DUE_DAYS.map((day) => (
+                        <option key={day} value={day}>
+                          {day}
+                          {day === 1 ? 'st' : 'th'} of every month
+                        </option>
+                      ))}
+                    </select>
+                    <Icon name="arrow_drop_down" className="absolute right-3.5 text-outline pointer-events-none" />
+                  </div>
+                </div>
+              </>
+            )}
 
             {error && <p className="font-label-md text-label-md text-error">{error}</p>}
 

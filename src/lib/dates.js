@@ -53,3 +53,25 @@ export function currentMonthIndex(kuri) {
     (today.getFullYear() - year) * 12 + (today.getMonth() + 1 - month)
   return Math.min(Math.max(monthsElapsed, 0), kuri.num_months - 1)
 }
+
+/**
+ * The active round index for a Kuri, regardless of schedule type.
+ * - Monthly Kuris: derived from today's date vs start_date, as always.
+ * - Occasion-based Kuris: whatever round the organizer has manually opened
+ *   (`kuri.current_round`) — null if nothing's been opened yet, meaning no
+ *   payment is currently due.
+ */
+export function currentRoundIndex(kuri) {
+  if (kuri.schedule_type === 'occasion') {
+    return kuri.current_round
+  }
+  return currentMonthIndex(kuri)
+}
+
+/** "October 2026" for monthly Kuris, "Round 3" for occasion-based ones. */
+export function roundLabel(kuri, index) {
+  if (kuri.schedule_type === 'occasion') {
+    return `Round ${index + 1}`
+  }
+  return monthLabel(kuri.start_date, index)
+}

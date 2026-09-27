@@ -6,7 +6,7 @@ import Card from '../../components/Card'
 import ProgressBar from '../../components/ProgressBar'
 import StatusChip from '../../components/StatusChip'
 import { supabase } from '../../lib/supabase'
-import { currentMonthIndex, dueDateForMonth, monthLabel } from '../../lib/dates'
+import { currentRoundIndex, dueDateForMonth, roundLabel } from '../../lib/dates'
 import { formatCurrency, formatDate } from '../../lib/format'
 
 export default function KuriDetail() {
@@ -65,53 +65,71 @@ export default function KuriDetail() {
     )
   }
 
-  const monthIndex = currentMonthIndex(kuri)
-  const percentDone = Math.round(((monthIndex + 1) / kuri.num_months) * 100)
-  const dueDate = dueDateForMonth(kuri, monthIndex)
-  const paidThisMonth = payments.some((p) => p.month === monthIndex)
-  const currentRecipient = recipients.find((r) => r.month === monthIndex)
+  const isOccasion = kuri.schedule_type === 'occasion'
+  const roundIndex = currentRoundIndex(kuri)
+  const noRoundOpen = roundIndex === null
+  const percentDone = noRoundOpen ? 0 : Math.round(((roundIndex + 1) / kuri.num_months) * 100)
+  const dueDate = !isOccasion && !noRoundOpen ? dueDateForMonth(kuri, roundIndex) : null
+  const paidThisRound = !noRoundOpen && payments.some((p) => p.month === roundIndex)
+  const currentRecipient = noRoundOpen ? null : recipients.find((r) => r.month === roundIndex)
 
   return (
     <>
-      <TopBar title={kuri.name} subtitle={`Round ${monthIndex + 1} of ${kuri.num_months}`} showBack />
+      <TopBar
+        title={kuri.name}
+        subtitle={noRoundOpen ? 'No round open yet' : `Round ${roundIndex + 1} of ${kuri.num_months}`}
+        showBack
+      />
       <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-header-safe pb-8 px-margin bg-surface min-h-screen">
         <div className="flex flex-col w-full space-y-4">
-          <Card>
-            <div className="flex items-baseline justify-between mb-2">
-              <h3 className="font-headline-md text-headline-md text-primary">Your Contribution</h3>
-              <span className="font-label-caps text-label-caps text-secondary font-bold">
-                {percentDone}% FULFILLED
-              </span>
-            </div>
-            <ProgressBar percent={percentDone} className="mb-3" />
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="font-label-md text-label-md text-on-surface-variant block">
-                  Monthly Share
-                </span>
-                <span className="font-numeric-sub text-numeric-sub font-bold text-primary">
-                  {formatCurrency(kuri.monthly_installment)}
+          {noRoundOpen ? (
+            <Card className="text-center py-8">
+              <Icon name="celebration" className="text-3xl text-outline mb-2" />
+              <p className="font-body-md text-body-md text-on-surface-variant">
+                No round is open for this Kuri right now — the organizer will let you know when a
+                payment is due.
+              </p>
+            </Card>
+          ) : (
+            <Card>
+              <div className="flex items-baseline justify-between mb-2">
+                <h3 className="font-headline-md text-headline-md text-primary">Your Contribution</h3>
+                <span className="font-label-caps text-label-caps text-secondary font-bold">
+                  {percentDone}% FULFILLED
                 </span>
               </div>
-              <div className="text-right">
-                <span className="font-label-md text-label-md text-on-surface-variant block">
-                  This Month
-                </span>
-                <StatusChip status={paidThisMonth ? 'paid' : 'unpaid'} />
+              <ProgressBar percent={percentDone} className="mb-3" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-label-md text-label-md text-on-surface-variant block">
+                    {isOccasion ? 'Share This Round' : 'Monthly Share'}
+                  </span>
+                  <span className="font-numeric-sub text-numeric-sub font-bold text-primary">
+                    {formatCurrency(kuri.monthly_installment)}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="font-label-md text-label-md text-on-surface-variant block">
+                    {isOccasion ? 'This Round' : 'This Month'}
+                  </span>
+                  <StatusChip status={paidThisRound ? 'paid' : 'unpaid'} />
+                </div>
               </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1.5 text-on-surface-variant">
-              <Icon name="event" className="text-[16px]" />
-              <span className="font-label-md text-label-md">Due {formatDate(dueDate)}</span>
-            </div>
-          </Card>
+              {dueDate && (
+                <div className="mt-3 flex items-center gap-1.5 text-on-surface-variant">
+                  <Icon name="event" className="text-[16px]" />
+                  <span className="font-label-md text-label-md">Due {formatDate(dueDate)}</span>
+                </div>
+              )}
+            </Card>
+          )}
 
           {currentRecipient && (
             <Card className="bg-secondary-container/20">
               <div className="flex items-center gap-2 mb-1">
                 <Icon name="stars" className="text-secondary text-[18px]" filled />
                 <span className="font-label-caps text-label-caps uppercase text-secondary tracking-wider">
-                  This Month's Recipient
+                  {isOccasion ? "This Round's Recipient" : "This Month's Recipient"}
                 </span>
               </div>
               <h3 className="font-headline-md text-headline-md text-primary">
@@ -144,7 +162,7 @@ export default function KuriDetail() {
                             <Icon name="check" className="text-lg" />
                           </div>
                           <h4 className="font-body-lg text-body-lg font-bold text-primary leading-tight">
-                            {monthLabel(kuri.start_date, p.month)}
+                            {roundLabel(kuri, p.month)}
                           </h4>
                         </div>
                         <div className="font-body-lg text-body-lg font-bold text-primary">
@@ -166,7 +184,7 @@ export default function KuriDetail() {
                   <div key={r.id}>
                     <div className="py-3 flex items-center justify-between">
                       <span className="font-body-lg text-body-lg text-on-surface">
-                        {monthLabel(kuri.start_date, r.month)}
+                        {roundLabel(kuri, r.month)}
                       </span>
                       <span className="font-label-lg text-label-lg font-bold text-primary">
                         {r.members?.name}

@@ -10,7 +10,7 @@ import RecipientReel, { buildReelSpin } from '../../components/RecipientReel'
 import { useKuriDetail } from '../../hooks/useKuriDetail'
 import { supabase } from '../../lib/supabase'
 import { toStoredPhone } from '../../lib/phone'
-import { currentMonthIndex, monthLabel, dueDateForMonth } from '../../lib/dates'
+import { currentRoundIndex, roundLabel, dueDateForMonth } from '../../lib/dates'
 import { formatCurrency, formatDate } from '../../lib/format'
 
 const TABS = ['Overview', 'Members', 'Payments', 'Pick recipient', 'Past recipients']
@@ -31,16 +31,21 @@ export default function KuriDetail() {
     )
   }
 
-  const monthIndex = currentMonthIndex(kuri)
+  const roundIndex = currentRoundIndex(kuri)
   const accepted = members.filter((m) => m.status === 'accepted')
+
+  let subtitle
+  if (kuri.status === 'completed') {
+    subtitle = 'Completed'
+  } else if (roundIndex === null) {
+    subtitle = 'No round open yet'
+  } else {
+    subtitle = `Round ${roundIndex + 1} of ${kuri.num_months}`
+  }
 
   return (
     <>
-      <TopBar
-        title={kuri.name}
-        subtitle={kuri.status === 'completed' ? 'Completed' : `Round ${monthIndex + 1} of ${kuri.num_months}`}
-        showBack
-      />
+      <TopBar title={kuri.name} subtitle={subtitle} showBack />
       <main className="flex-1 flex flex-col relative w-full max-w-xl mx-auto pt-header-safe pb-8 px-margin bg-surface min-h-screen">
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-margin px-margin">
           {TABS.map((t) => (
@@ -60,14 +65,14 @@ export default function KuriDetail() {
         </div>
 
         {tab === 'Overview' && (
-          <OverviewTab kuri={kuri} members={accepted} payments={payments} monthIndex={monthIndex} onChange={refresh} />
+          <OverviewTab kuri={kuri} members={accepted} payments={payments} roundIndex={roundIndex} onChange={refresh} />
         )}
         {tab === 'Members' && <MembersTab kuri={kuri} members={members} onChange={refresh} />}
         {tab === 'Payments' && (
-          <PaymentsTab kuri={kuri} members={accepted} payments={payments} monthIndex={monthIndex} onChange={refresh} />
+          <PaymentsTab kuri={kuri} members={accepted} payments={payments} roundIndex={roundIndex} onChange={refresh} />
         )}
         {tab === 'Pick recipient' && (
-          <PickRecipientTab kuri={kuri} members={accepted} monthIndex={monthIndex} onChange={refresh} />
+          <PickRecipientTab kuri={kuri} members={accepted} roundIndex={roundIndex} onChange={refresh} />
         )}
         {tab === 'Past recipients' && (
           <PastRecipientsTab kuri={kuri} recipients={recipients} members={members} />
@@ -79,14 +84,17 @@ export default function KuriDetail() {
 
 const DUE_DAYS = [1, 5, 10, 15, 20, 25]
 
-function OverviewTab({ kuri, members, payments, monthIndex, onChange }) {
+function OverviewTab({ kuri, members, payments, roundIndex, onChange }) {
   const navigate = useNavigate()
-  const paidThisMonth = payments.filter((p) => p.month === monthIndex)
-  const collected = paidThisMonth.reduce((sum, p) => sum + Number(p.amount), 0)
+  const isOccasion = kuri.schedule_type === 'occasion'
+  const noRoundOpen = isOccasion && roundIndex === null
+
+  const paidThisRound = noRoundOpen ? [] : payments.filter((p) => p.month === roundIndex)
+  const collected = paidThisRound.reduce((sum, p) => sum + Number(p.amount), 0)
   const expected = members.length * Number(kuri.monthly_installment)
-  const unpaidCount = members.length - paidThisMonth.length
-  const dueDate = dueDateForMonth(kuri, monthIndex)
-  const isPastDue = new Date() > new Date(`${dueDate}T23:59:59`)
+  const unpaidCount = members.length - paidThisRound.length
+  const dueDate = !isOccasion && roundIndex !== null ? dueDateForMonth(kuri, roundIndex) : null
+  const isPastDue = dueDate ? new Date() > new Date(`${dueDate}T23:59:59`) : false
 
   const [name, setName] = useState(kuri.name)
   const [dueDay, setDueDay] = useState(kuri.due_day)
@@ -94,6 +102,7 @@ function OverviewTab({ kuri, members, payments, monthIndex, onChange }) {
   const [saved, setSaved] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [opening, setOpening] = useState(false)
 
   async function saveDetails(e) {
     e.preventDefault()
@@ -113,49 +122,97 @@ function OverviewTab({ kuri, members, payments, monthIndex, onChange }) {
     navigate('/organizer')
   }
 
+  async function openRound() {
+    if (!supabase) return
+    setOpening(true)
+    const nextRound = roundIndex === null ? 0 : roundIndex + 1
+    await supabase.from('kuris').update({ current_round: nextRound }).eq('id', kuri.id)
+    await supabase.from('notifications').insert(
+      members.map((m) => ({
+        kuri_id: kuri.id,
+        member_id: m.id,
+        type: 'payment_due',
+        message: `A payment is now due for "${kuri.name}" — ${formatCurrency(kuri.monthly_installment)} for Round ${nextRound + 1}.`,
+      }))
+    )
+    setOpening(false)
+    onChange()
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <div className="flex items-baseline justify-between mb-2">
-          <h3 className="font-headline-md text-headline-md text-primary">This Month's Collection</h3>
-        </div>
-        <ProgressBar percent={expected ? (collected / expected) * 100 : 0} className="mb-3" />
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="font-label-md text-label-md text-on-surface-variant block">Collected</span>
-            <span className="font-numeric-sub text-numeric-sub font-bold text-primary">
-              {formatCurrency(collected)}
-            </span>
+      {isOccasion && (
+        <Card>
+          <div className="flex items-center gap-2 mb-2">
+            <Icon name="celebration" className="text-secondary text-xl" />
+            <h3 className="font-headline-md text-headline-md text-primary">Round Control</h3>
           </div>
-          <div className="text-right">
-            <span className="font-label-md text-label-md text-on-surface-variant block">Expected</span>
-            <span className="font-numeric-sub text-numeric-sub font-bold text-on-surface-variant">
-              {formatCurrency(expected)}
-            </span>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center gap-1.5 text-on-surface-variant">
-          <Icon name="event" className="text-[16px]" />
-          <span className="font-label-md text-label-md">Due {formatDate(dueDate)}</span>
-        </div>
-      </Card>
+          {noRoundOpen ? (
+            <p className="font-body-md text-body-md text-on-surface-variant mb-3">
+              No round is open yet — members won't be asked to pay anything until you open one.
+            </p>
+          ) : (
+            <p className="font-body-md text-body-md text-on-surface-variant mb-3">
+              Round {roundIndex + 1} of {kuri.num_months} is currently open for payment.
+            </p>
+          )}
+          {(noRoundOpen || roundIndex + 1 < kuri.num_months) && (
+            <Button size="md" disabled={opening} onClick={openRound} icon={<Icon name="campaign" className="text-[18px]" />}>
+              {opening ? 'Opening…' : `Open Round ${(roundIndex === null ? 0 : roundIndex + 1) + 1}`}
+            </Button>
+          )}
+        </Card>
+      )}
 
-      <div className="grid grid-cols-2 gap-3">
+      {!noRoundOpen && (
         <Card>
-          <span className="font-label-md text-label-md text-on-surface-variant">Members</span>
-          <div className="font-headline-lg text-headline-lg text-primary mt-0.5">{members.length}</div>
-        </Card>
-        <Card>
-          <span className="font-label-md text-label-md text-on-surface-variant">
-            {isPastDue ? 'Overdue' : 'Not yet paid'}
-          </span>
-          <div
-            className={`font-headline-lg text-headline-lg mt-0.5 ${isPastDue ? 'text-error' : 'text-secondary'}`}
-          >
-            {unpaidCount}
+          <div className="flex items-baseline justify-between mb-2">
+            <h3 className="font-headline-md text-headline-md text-primary">
+              {isOccasion ? "This Round's Collection" : "This Month's Collection"}
+            </h3>
           </div>
+          <ProgressBar percent={expected ? (collected / expected) * 100 : 0} className="mb-3" />
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="font-label-md text-label-md text-on-surface-variant block">Collected</span>
+              <span className="font-numeric-sub text-numeric-sub font-bold text-primary">
+                {formatCurrency(collected)}
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="font-label-md text-label-md text-on-surface-variant block">Expected</span>
+              <span className="font-numeric-sub text-numeric-sub font-bold text-on-surface-variant">
+                {formatCurrency(expected)}
+              </span>
+            </div>
+          </div>
+          {dueDate && (
+            <div className="mt-3 flex items-center gap-1.5 text-on-surface-variant">
+              <Icon name="event" className="text-[16px]" />
+              <span className="font-label-md text-label-md">Due {formatDate(dueDate)}</span>
+            </div>
+          )}
         </Card>
-      </div>
+      )}
+
+      {!noRoundOpen && (
+        <div className="grid grid-cols-2 gap-3">
+          <Card>
+            <span className="font-label-md text-label-md text-on-surface-variant">Members</span>
+            <div className="font-headline-lg text-headline-lg text-primary mt-0.5">{members.length}</div>
+          </Card>
+          <Card>
+            <span className="font-label-md text-label-md text-on-surface-variant">
+              {isPastDue ? 'Overdue' : 'Not yet paid'}
+            </span>
+            <div
+              className={`font-headline-lg text-headline-lg mt-0.5 ${isPastDue ? 'text-error' : 'text-secondary'}`}
+            >
+              {unpaidCount}
+            </div>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <h3 className="font-headline-md text-headline-md text-primary mb-3">Kuri Settings</h3>
@@ -411,11 +468,11 @@ function MembersTab({ kuri, members, onChange }) {
   )
 }
 
-function PaymentsTab({ kuri, members, payments, monthIndex: currentMonthIdx, onChange }) {
+function PaymentsTab({ kuri, members, payments, roundIndex, onChange }) {
   const [pending, setPending] = useState(null)
-  const [selectedMonth, setSelectedMonth] = useState(currentMonthIdx)
+  const [selectedRound, setSelectedRound] = useState(roundIndex ?? 0)
   const paidMemberIds = new Set(
-    payments.filter((p) => p.month === selectedMonth).map((p) => p.member_id)
+    payments.filter((p) => p.month === selectedRound).map((p) => p.member_id)
   )
 
   async function togglePaid(member) {
@@ -427,23 +484,34 @@ function PaymentsTab({ kuri, members, payments, monthIndex: currentMonthIdx, onC
         .delete()
         .eq('kuri_id', kuri.id)
         .eq('member_id', member.id)
-        .eq('month', selectedMonth)
+        .eq('month', selectedRound)
     } else {
       await supabase.from('payments').insert({
         kuri_id: kuri.id,
         member_id: member.id,
-        month: selectedMonth,
+        month: selectedRound,
         amount: kuri.monthly_installment,
       })
       await supabase.from('notifications').insert({
         kuri_id: kuri.id,
         member_id: member.id,
         type: 'payment_recorded',
-        message: `Your payment of ${formatCurrency(kuri.monthly_installment)} for ${monthLabel(kuri.start_date, selectedMonth)} was recorded.`,
+        message: `Your payment of ${formatCurrency(kuri.monthly_installment)} for ${roundLabel(kuri, selectedRound)} was recorded.`,
       })
     }
     setPending(null)
     onChange()
+  }
+
+  if (roundIndex === null) {
+    return (
+      <Card className="text-center py-8">
+        <Icon name="celebration" className="text-3xl text-outline mb-2" />
+        <p className="font-body-md text-body-md text-on-surface-variant">
+          No round is open yet — open one from the Overview tab to start collecting payments.
+        </p>
+      </Card>
+    )
   }
 
   return (
@@ -451,21 +519,21 @@ function PaymentsTab({ kuri, members, payments, monthIndex: currentMonthIdx, onC
       <div className="flex items-center justify-between mb-2">
         <button
           type="button"
-          onClick={() => setSelectedMonth((m) => Math.max(0, m - 1))}
-          disabled={selectedMonth === 0}
-          aria-label="Previous month"
+          onClick={() => setSelectedRound((m) => Math.max(0, m - 1))}
+          disabled={selectedRound === 0}
+          aria-label="Previous round"
           className="w-9 h-9 rounded-full flex items-center justify-center text-primary disabled:opacity-30 active:bg-surface-container-high transition-colors"
         >
           <Icon name="chevron_left" className="text-xl" />
         </button>
         <h3 className="font-headline-md text-headline-md text-primary">
-          {monthLabel(kuri.start_date, selectedMonth)} Payments
+          {roundLabel(kuri, selectedRound)} Payments
         </h3>
         <button
           type="button"
-          onClick={() => setSelectedMonth((m) => Math.min(currentMonthIdx, m + 1))}
-          disabled={selectedMonth >= currentMonthIdx}
-          aria-label="Next month"
+          onClick={() => setSelectedRound((m) => Math.min(roundIndex, m + 1))}
+          disabled={selectedRound >= roundIndex}
+          aria-label="Next round"
           className="w-9 h-9 rounded-full flex items-center justify-center text-primary disabled:opacity-30 active:bg-surface-container-high transition-colors"
         >
           <Icon name="chevron_right" className="text-xl" />
@@ -504,7 +572,7 @@ function PaymentsTab({ kuri, members, payments, monthIndex: currentMonthIdx, onC
   )
 }
 
-function PickRecipientTab({ kuri, members, monthIndex, onChange }) {
+function PickRecipientTab({ kuri, members, roundIndex, onChange }) {
   const eligible = useMemo(() => members.filter((m) => !m.has_received), [members])
   const [selected, setSelected] = useState(null)
   const [selectionType, setSelectionType] = useState('manual')
@@ -513,11 +581,11 @@ function PickRecipientTab({ kuri, members, monthIndex, onChange }) {
   const [confirming, setConfirming] = useState(false)
 
   async function confirm() {
-    if (!supabase || !selected) return
+    if (!supabase || !selected || roundIndex === null) return
     setConfirming(true)
     const { error } = await supabase.from('recipients').insert({
       kuri_id: kuri.id,
-      month: monthIndex,
+      month: roundIndex,
       member_id: selected.id,
       selection_type: selectionType,
     })
@@ -575,6 +643,17 @@ function PickRecipientTab({ kuri, members, monthIndex, onChange }) {
         <Icon name="groups" className="text-3xl text-outline mb-2" />
         <p className="font-body-md text-body-md text-on-surface-variant">
           No accepted members yet — invite people from the Members tab first.
+        </p>
+      </Card>
+    )
+  }
+
+  if (roundIndex === null) {
+    return (
+      <Card className="text-center py-8">
+        <Icon name="celebration" className="text-3xl text-outline mb-2" />
+        <p className="font-body-md text-body-md text-on-surface-variant">
+          Open a round from the Overview tab before picking a recipient.
         </p>
       </Card>
     )
@@ -670,7 +749,7 @@ function PastRecipientsTab({ kuri, recipients, members }) {
         <div key={r.id}>
           <div className="py-3 flex items-center justify-between">
             <span className="font-body-lg text-body-lg text-on-surface">
-              {monthLabel(kuri.start_date, r.month)}
+              {roundLabel(kuri, r.month)}
             </span>
             <span className="font-label-lg text-label-lg font-bold text-primary">
               {memberById.get(r.member_id)?.name ?? 'Unknown'}
