@@ -19,7 +19,7 @@ export default function Welcome() {
     setError(null)
     const { error: upsertError } = await supabase
       .from('organizers')
-      .upsert({ id: user.id, phone: user.phone, email: user.email, name: name.trim() })
+      .upsert({ id: user.id, email: user.email, name: name.trim() })
     setSaving(false)
     if (upsertError) {
       setError(upsertError.message)

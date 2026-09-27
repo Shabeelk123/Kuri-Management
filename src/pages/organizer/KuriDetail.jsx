@@ -10,7 +10,6 @@ import RecipientReel, { buildReelSpin } from '../../components/RecipientReel'
 import OrganizerBottomNav from '../../components/OrganizerBottomNav'
 import { useKuriDetail } from '../../hooks/useKuriDetail'
 import { supabase } from '../../lib/supabase'
-import { toStoredPhone } from '../../lib/phone'
 import { currentRoundIndex, roundLabel, dueDateForMonth } from '../../lib/dates'
 import { formatCurrency, formatDate } from '../../lib/format'
 
@@ -297,8 +296,6 @@ function OverviewTab({ kuri, members, payments, roundIndex, onChange }) {
 
 function MembersTab({ kuri, members, onChange }) {
   const [name, setName] = useState('')
-  const [contactMethod, setContactMethod] = useState('phone') // 'phone' | 'email'
-  const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState(null)
@@ -313,8 +310,7 @@ function MembersTab({ kuri, members, onChange }) {
       .insert({
         kuri_id: kuri.id,
         name,
-        phone: contactMethod === 'phone' ? toStoredPhone(phone) : null,
-        email: contactMethod === 'email' ? email : null,
+        email,
       })
       .select()
       .single()
@@ -331,7 +327,6 @@ function MembersTab({ kuri, members, onChange }) {
       message: `You've been invited to join "${kuri.name}" — ${formatCurrency(kuri.monthly_installment)}/month for ${kuri.num_months} months.`,
     })
     setName('')
-    setPhone('')
     setEmail('')
     setAdding(false)
     onChange()
@@ -370,45 +365,14 @@ function MembersTab({ kuri, members, onChange }) {
             required
           />
 
-          <div className="flex items-center bg-surface-container-high p-1 rounded-full w-fit">
-            <button
-              type="button"
-              onClick={() => setContactMethod('phone')}
-              className={`px-3.5 py-1.5 rounded-full font-label-md text-label-md font-semibold transition-all ${
-                contactMethod === 'phone' ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant'
-              }`}
-            >
-              Phone
-            </button>
-            <button
-              type="button"
-              onClick={() => setContactMethod('email')}
-              className={`px-3.5 py-1.5 rounded-full font-label-md text-label-md font-semibold transition-all ${
-                contactMethod === 'email' ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant'
-              }`}
-            >
-              Email
-            </button>
-          </div>
-
-          {contactMethod === 'phone' ? (
-            <input
-              className="w-full h-12 px-3.5 bg-surface-container-low text-on-surface rounded-lg font-body-lg text-body-lg placeholder:text-outline focus:outline-none"
-              placeholder="Phone number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-          ) : (
-            <input
-              type="email"
-              className="w-full h-12 px-3.5 bg-surface-container-low text-on-surface rounded-lg font-body-lg text-body-lg placeholder:text-outline focus:outline-none"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          )}
+          <input
+            type="email"
+            className="w-full h-12 px-3.5 bg-surface-container-low text-on-surface rounded-lg font-body-lg text-body-lg placeholder:text-outline focus:outline-none"
+            placeholder="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
           {addError && <p className="font-label-md text-label-md text-error">{addError}</p>}
 
@@ -431,7 +395,7 @@ function MembersTab({ kuri, members, onChange }) {
               <div className="min-w-0">
                 <h4 className="font-body-lg text-body-lg font-bold text-primary truncate">{m.name}</h4>
                 <p className="font-label-md text-label-md text-on-surface-variant truncate">
-                  {m.phone ?? m.email}
+                  {m.email}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">

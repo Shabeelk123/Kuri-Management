@@ -34,22 +34,11 @@ export default function Profile() {
           </div>
 
           <Card>
-            <div className="flex flex-col divide-y divide-surface-container">
-              <div className="py-3 flex items-center gap-3">
-                <Icon name="call" className="text-on-surface-variant text-[20px]" />
-                <div>
-                  <span className="font-label-md text-label-md text-on-surface-variant block">Phone</span>
-                  <span className="font-body-lg text-body-lg text-on-surface">
-                    {user?.phone ? `+${user.phone}` : '—'}
-                  </span>
-                </div>
-              </div>
-              <div className="py-3 flex items-center gap-3">
-                <Icon name="mail" className="text-on-surface-variant text-[20px]" />
-                <div>
-                  <span className="font-label-md text-label-md text-on-surface-variant block">Email</span>
-                  <span className="font-body-lg text-body-lg text-on-surface">{user?.email ?? '—'}</span>
-                </div>
+            <div className="flex items-center gap-3">
+              <Icon name="mail" className="text-on-surface-variant text-[20px]" />
+              <div>
+                <span className="font-label-md text-label-md text-on-surface-variant block">Email</span>
+                <span className="font-body-lg text-body-lg text-on-surface">{user?.email ?? '—'}</span>
               </div>
             </div>
           </Card>

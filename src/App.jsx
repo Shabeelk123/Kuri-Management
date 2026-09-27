@@ -4,7 +4,7 @@ import { AuthProvider } from './lib/AuthContext'
 import RequireAuth from './components/RequireAuth'
 import RoleChoice from './pages/RoleChoice'
 
-const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Dashboard = lazy(() => import('./pages/organizer/Dashboard'))
 const CreateKuri = lazy(() => import('./pages/organizer/CreateKuri'))
 const OrganizerKuriDetail = lazy(() => import('./pages/organizer/KuriDetail'))
@@ -33,7 +33,7 @@ export default function App() {
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<RoleChoice />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
             <Route path="/organizer/login" element={<Login role="organizer" />} />
             <Route path="/organizer/verify" element={<VerifyOtp role="organizer" />} />

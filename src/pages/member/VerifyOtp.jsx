@@ -3,14 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import Button from '../../components/Button'
 import { supabase } from '../../lib/supabase'
-import { toE164 } from '../../lib/phone'
 
 const RESEND_COOLDOWN_SECONDS = 30
 
 export default function VerifyOtp({ role = 'member' }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const phone = location.state?.phone ?? ''
+  const email = location.state?.email ?? ''
   const effectiveRole = location.state?.role ?? role
   const [code, setCode] = useState('')
   const [verifying, setVerifying] = useState(false)
@@ -30,7 +29,10 @@ export default function VerifyOtp({ role = 'member' }) {
     setResending(true)
     setError(null)
     setResent(false)
-    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: toE164(phone) })
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    })
     setResending(false)
     if (otpError) {
       setError(otpError.message)
@@ -49,9 +51,9 @@ export default function VerifyOtp({ role = 'member' }) {
     setVerifying(true)
     setError(null)
     const { data, error: verifyError } = await supabase.auth.verifyOtp({
-      phone: toE164(phone),
+      email,
       token: code,
-      type: 'sms',
+      type: 'email',
     })
     if (verifyError) {
       setVerifying(false)
@@ -67,7 +69,7 @@ export default function VerifyOtp({ role = 'member' }) {
         .maybeSingle()
       setVerifying(false)
       // First-time organizer: collect a real name before landing on the
-      // dashboard, instead of defaulting to their phone number as "name".
+      // dashboard, instead of defaulting to their email as "name".
       navigate(existingOrganizer ? '/organizer' : '/organizer/welcome')
       return
     }
@@ -101,12 +103,11 @@ export default function VerifyOtp({ role = 'member' }) {
               <h2 className="font-headline-md text-headline-md text-primary">Enter 6-Digit Code</h2>
             </div>
             <span className="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps">
-              SMS SENT
+              EMAIL SENT
             </span>
           </div>
           <p className="font-body-md text-body-md text-on-surface-variant mb-4">
-            Sent to <span className="font-bold text-on-surface">+91 {phone}</span>. Check your
-            messages.
+            Sent to <span className="font-bold text-on-surface">{email}</span>. Check your inbox.
           </p>
           <input
             aria-label="Verification code"
