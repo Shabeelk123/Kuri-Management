@@ -60,18 +60,20 @@ export default function VerifyOtp({ role = 'member' }) {
     }
 
     if (effectiveRole === 'organizer' && data.user) {
-      const { error: profileError } = await supabase
+      const { data: existingOrganizer } = await supabase
         .from('organizers')
-        .upsert({ id: data.user.id, phone: data.user.phone, name: data.user.phone })
-      if (profileError) {
-        setVerifying(false)
-        setError(profileError.message)
-        return
-      }
+        .select('id')
+        .eq('id', data.user.id)
+        .maybeSingle()
+      setVerifying(false)
+      // First-time organizer: collect a real name before landing on the
+      // dashboard, instead of defaulting to their phone number as "name".
+      navigate(existingOrganizer ? '/organizer' : '/organizer/welcome')
+      return
     }
 
     setVerifying(false)
-    navigate(effectiveRole === 'organizer' ? '/organizer' : '/member/kuris')
+    navigate('/member/kuris')
   }
 
   return (

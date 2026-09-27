@@ -9,6 +9,7 @@ const Dashboard = lazy(() => import('./pages/organizer/Dashboard'))
 const CreateKuri = lazy(() => import('./pages/organizer/CreateKuri'))
 const OrganizerKuriDetail = lazy(() => import('./pages/organizer/KuriDetail'))
 const OrganizerProfile = lazy(() => import('./pages/organizer/Profile'))
+const OrganizerWelcome = lazy(() => import('./pages/organizer/Welcome'))
 const Login = lazy(() => import('./pages/member/Login'))
 const VerifyOtp = lazy(() => import('./pages/member/VerifyOtp'))
 const Invitations = lazy(() => import('./pages/member/Invitations'))
@@ -36,6 +37,14 @@ export default function App() {
 
             <Route path="/organizer/login" element={<Login role="organizer" />} />
             <Route path="/organizer/verify" element={<VerifyOtp role="organizer" />} />
+            <Route
+              path="/organizer/welcome"
+              element={
+                <RequireAuth redirectTo="/organizer/login">
+                  <OrganizerWelcome />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/organizer"
               element={
