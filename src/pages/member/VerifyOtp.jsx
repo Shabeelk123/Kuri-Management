@@ -4,9 +4,12 @@ import Icon from '../../components/Icon'
 import Button from '../../components/Button'
 import { supabase } from '../../lib/supabase'
 
+// This screen is used by the ORGANIZER email-OTP flow only.
+// Members now log in directly with mobile number + PIN — no OTP needed.
+
 const RESEND_COOLDOWN_SECONDS = 30
 
-export default function VerifyOtp({ role = 'member' }) {
+export default function VerifyOtp({ role = 'organizer' }) {
   const navigate = useNavigate()
   const location = useLocation()
   const email = location.state?.email ?? ''
@@ -34,10 +37,7 @@ export default function VerifyOtp({ role = 'member' }) {
       options: { shouldCreateUser: true },
     })
     setResending(false)
-    if (otpError) {
-      setError(otpError.message)
-      return
-    }
+    if (otpError) { setError(otpError.message); return }
     setResent(true)
     setCooldown(RESEND_COOLDOWN_SECONDS)
   }
@@ -68,8 +68,6 @@ export default function VerifyOtp({ role = 'member' }) {
         .eq('id', data.user.id)
         .maybeSingle()
       setVerifying(false)
-      // First-time organizer: collect a real name before landing on the
-      // dashboard, instead of defaulting to their email as "name".
       navigate(existingOrganizer ? '/organizer' : '/organizer/welcome')
       return
     }

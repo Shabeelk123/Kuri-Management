@@ -296,21 +296,35 @@ function OverviewTab({ kuri, members, payments, roundIndex, onChange }) {
 
 function MembersTab({ kuri, members, onChange }) {
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState(null)
+
+  // Normalise to digits-only with country code, e.g. "919876543210"
+  function cleanPhone(raw) {
+    const d = raw.replace(/\D/g, '')
+    if (d.startsWith('91') && d.length === 12) return d
+    if (d.length === 10) return `91${d}`
+    return d
+  }
 
   async function addMember(e) {
     e.preventDefault()
     if (!supabase) return
     setAdding(true)
     setAddError(null)
+    const cleaned = cleanPhone(phone)
+    if (cleaned.length < 12) {
+      setAdding(false)
+      setAddError('Please enter a valid 10-digit mobile number.')
+      return
+    }
     const { data: newMember, error } = await supabase
       .from('members')
       .insert({
         kuri_id: kuri.id,
         name,
-        email,
+        phone: cleaned,
       })
       .select()
       .single()
@@ -327,7 +341,7 @@ function MembersTab({ kuri, members, onChange }) {
       message: `You've been invited to join "${kuri.name}" — ${formatCurrency(kuri.monthly_installment)}/month for ${kuri.num_months} months.`,
     })
     setName('')
-    setEmail('')
+    setPhone('')
     setAdding(false)
     onChange()
   }
@@ -365,14 +379,19 @@ function MembersTab({ kuri, members, onChange }) {
             required
           />
 
-          <input
-            type="email"
-            className="w-full h-12 px-3.5 bg-surface-container-low text-on-surface rounded-lg font-body-lg text-body-lg placeholder:text-outline focus:outline-none"
-            placeholder="Email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <div className="relative flex items-center">
+            <span className="absolute left-3.5 font-body-lg text-body-lg text-on-surface-variant select-none">+91</span>
+            <input
+              type="tel"
+              inputMode="numeric"
+              className="w-full h-12 pl-12 pr-3.5 bg-surface-container-low text-on-surface rounded-lg font-body-lg text-body-lg placeholder:text-outline focus:outline-none"
+              placeholder="98765 43210"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/[^\d\s]/g, ''))}
+              maxLength={10}
+              required
+            />
+          </div>
 
           {addError && <p className="font-label-md text-label-md text-error">{addError}</p>}
 
@@ -395,7 +414,7 @@ function MembersTab({ kuri, members, onChange }) {
               <div className="min-w-0">
                 <h4 className="font-body-lg text-body-lg font-bold text-primary truncate">{m.name}</h4>
                 <p className="font-label-md text-label-md text-on-surface-variant truncate">
-                  {m.email}
+                  +{m.phone}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">

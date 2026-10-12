@@ -79,7 +79,7 @@ export default function App() {
             />
 
             <Route path="/member/login" element={<Login role="member" />} />
-            <Route path="/member/verify" element={<VerifyOtp role="member" />} />
+            {/* /member/verify is intentionally removed — members use mobile+PIN, no OTP */}
             <Route
               path="/member/invitations"
               element={
